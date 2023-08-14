@@ -1,5 +1,7 @@
 <?php
 
+session_start(); // Start or resume the session
+
 define( 'DVWA_WEB_PAGE_TO_ROOT', '../../' );
 require_once DVWA_WEB_PAGE_TO_ROOT . 'dvwa/includes/dvwaPage.inc.php';
 
@@ -7,7 +9,17 @@ dvwaPageStartup( array( 'authenticated' ) );
 dvwaDatabaseConnect();
 $login_state = "";
 
+//Generate and store CSRF token in session
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Generate a random token
+}
+
 if( isset( $_POST[ 'Login' ] ) ) {
+
+	//Validate CSRF Token
+	if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        	die("CSRF token validation failed. This might be a CSRF attack.");
+    	}
 
 	$user = $_POST[ 'username' ];
 	$user = stripslashes( $user );
@@ -40,9 +52,10 @@ $page[ 'body' ] .= "
 				<form action=\"" . DVWA_WEB_PAGE_TO_ROOT . "vulnerabilities/csrf/test_credentials.php\" method=\"post\">
 					<fieldset>
 						" . $login_state . "
-						<label for=\"user\">Username</label><br /> <input type=\"text\" class=\"loginInput\" size=\"20\" name=\"username\"><br />
-						<label for=\"pass\">Password</label><br /> <input type=\"password\" class=\"loginInput\" AUTOCOMPLETE=\"off\" size=\"20\" name=\"password\"><br />
-						<p class=\"submit\"><input type=\"submit\" value=\"Login\" name=\"Login\"></p>
+						<input type=\"hidden\" name=\"csrf_token\" value=\"" . $_SESSION['csrf_token'] . "\">
+                    				<label for=\"user\">Username</label><br /> <input type=\"text\" class=\"loginInput\" size=\"20\" name=\"username\"><br />
+                    				<label for=\"pass\">Password</label><br /> <input type=\"password\" class=\"loginInput\" AUTOCOMPLETE=\"off\" size=\"20\" name=\"password\"><br />
+                    				<p class=\"submit\"><input type=\"submit\" value=\"Login\" name=\"Login\"></p>
 					</fieldset>
 				</form>
 				{$messagesHtml}
